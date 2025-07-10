@@ -86,6 +86,25 @@ func (cache *Cache) Get(key []byte) (value []byte, err error) {
 	return
 }
 
+// Add adds value to key
+func (cache *Cache) Add(key, increment []byte, expiredSeconds int) (value []byte, err error) {
+	hashVal := hashFunc(key)
+	segID := hashVal & segmentAndOpVal
+	cache.locks[segID].Lock()
+	value, _, err = cache.segments[segID].get(key, nil, hashVal, false)
+	var curVal uint64 = 0
+	if err == nil { // found
+		curVal = binary.LittleEndian.Uint64(value)
+	} else {
+		value = make([]byte, 8)
+	}
+	newVal := curVal + binary.LittleEndian.Uint64(increment)
+	binary.LittleEndian.PutUint64(value, newVal)
+	err = cache.segments[segID].set(key, value, hashVal, expiredSeconds)
+	cache.locks[segID].Unlock()
+	return
+}
+
 // GetFn is equivalent to Get or GetWithBuf, but it attempts to be zero-copy,
 // calling the provided function with slice view over the current underlying
 // value of the key in memory. The slice is constrained in length and capacity.
