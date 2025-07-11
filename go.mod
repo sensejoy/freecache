@@ -1,4 +1,4 @@
-module github.com/coocood/freecache
+module github.com/sensejoy/freecache
 
 go 1.13
 
